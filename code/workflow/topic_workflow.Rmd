@@ -1,0 +1,38 @@
+---
+title: "Prairie Pisgah - Topic + Workflow"
+author: "Jacob Swanson"
+date: "2025-11-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Topic
+
+Do plant species with different niche breadths have similarly variable pollinator compositions, or are the observed patterns no different from those expected by chance?
+
+#Workflow
+
+1. Use Susan Waters standardized plant-pollinator data from Willamette Valley prairies in Oregon 
+
+2. Create network for each site and year using bipartite :: frame2webs function
+
+3. Create function that calculates d (niche breadth) for each plant species bipartite :: specieslevel, loop across sites and year 
+
+4. Also in the for loop, calculate total number of pollinator species observed for each plant species (richness)
+
+5. Combine results into single dataframe
+
+6. Bin plants into generalists, self autonomy, specialists
+
+7. calculate observed statistic: mean pollinator richness for each niche breadth category - need to control for plant abundance (matrix multiplication?)
+
+8. Create a null model that randomizes the number of pollinator species observed for each plant species. Do I need to constrain for the number of pollinators each plant has?
+
+9. Run null model 1000 times to create null distribution of mean pollinator richness for each niche breadth category
+
+10. Conduct AB test to compare observed to null distribution for each niche breadth category
+
+11. Visualize observed and null distributions with ggplot2
