@@ -1,0 +1,78 @@
+---
+title: "Context Dependent Mutualisms: How Network Architecture Shapes Pollination Benefits in Willamette Valley Prairies"
+author: "Jacob Swanson"
+date: "2025-11-11"
+output: html_document
+---
+
+## Literature review (~5 paragraphs)
+
+### Paragraph 1 — Problem & significance (big‑picture reviews)
+
+Mutualisms—interactions where species provide reciprocal benefits—are central to biodiversity and ecosystem function. Plant-pollinator networks are among some of the most widespread and consequential mutualisms influencing species fitness, population dynamics, and even the trajectory of evolution (Bronstein 2015). Yet mutualistic outcomes are not fixed: the benefits one species receives often depend on the broader community context, where indirect interactions can tip the balance between facilitation and competition (Darwin 1959, Wooton 1994, Cosmo et al. 2023). Predicting when mutualisms maintain diversity versus antagonisms that impose costs remains a central challenge in ecology and evolution. 
+
+### Paragraph 2–3 — Past work & data landscape (who/where/how; gaps)
+
+Previous studies have demonstrated how plants compete through shared pollinators, and the consequences for plant reproduction. For example, Bergamo et al. (2021) examined the fitness consequences of pollinator-mediated indirect interactions in plant-pollinator networks using seed set data for 23 different focal species. They found that plant fecundity was influenced by how pollinators are shared, where more generalized plants monopolized pollinator visitation potentially harming co-flowering specialist plants. Gomez et al. (2020) explores how network properties that are related to plant-pollinator visitation, such as network position and role are related to patterns of pollen deposition. By mapping plant-pollinator networks in early succession grasslands in Tennessee and collecting style data for focal species, they quantified conspecific and heterospecific load size. They found that network metrics may predict pollen deposition--such that the degree of plant specialization may be associated with increased heterospecific load size. Similarly, Wei and colleagues (2021) examined how niche partitioning and asymmetric facilitation maintain rare species persistence. They collected plant-pollinator interaction data over two flowering seasons in serpentine seep communities and taxonomically identified 3.1 million pollen grains from flower stigmas. They found in species-rich communities, plant-pollinator interactions favor rare species through asymmetric facilitation--where generalists plants, though they received higher visitation, suffered fitness consequences due to conspecific pollen loss. Interestingly, these studies used different metrics to assess plant fitness (pollen vs seed set), which produced contrasting outcomes. Additionally, these studies do not consider how pollinator sharing may be variable across communities, where some communities may have high vs. low pollination niche overlap, leaving a paucity of information that may inform which network architecture is mutualistic vs. antagonistic. 
+
+Notably, plant niche breadth is dynamic and context dependent (i.e., temporal and spatial) which challenges our ability to generalize across plant species that are often grouped by their degree of niche breadth. For example, Herrera (2005) examined whether \textit{L. latifolia} populations and individuals differ in their degree of pollinator generalization by conducing a multi-year census of plant-pollinator interactions across southeastern Spain. Using rarefaction analyses they compared individual and population-level generalization, and found that pollinator generalization is not fixed species-level trait. They also found generalization varied across populations of \textit{L. latifolia}. Similarly, Gonzalez et al. (2015) conducted a study that characterized pollinator assemblages across two years for six different populations of \textit{A. ligtu simsii} in the same region with a Mediterranean-type climate. They found that \textit{A. ligtus simsii} populations among years varied in pollinator abundance, richness, and diversity. While these studies provide valuable insight, they often focus on a single species, limiting our understanding of broader patterns. By moving beyond single-species assessments to a multi-species context, we can begin to ask whether generalizable patterns in niche breadth emerge across species and communities. 
+
+### Paragraph 4 — Purpose & why now
+
+Over the past 175 years native prairie and savanna ecosystems in the Pacific Northwest have suffered a drastic decline, with approximately 90-98% lost throughout the region (Sinclair 2006, Altman 2011). A novel conservation strategy with high potential to support restoration of these imperiled habitats and secure vital ecosystem services, is using seed mixes that focus on species combinations that maximize pollinator efficiency for rare or restoration-priority plants.  Mutualistic network theory predicts that the effects one plant has on another via pollinator sharing depends on both niche overlap and network position. Yet, the composition of plant-pollinator interactions is highly dynamic, even well-characterized pairwise outcomes differ across space, time, and disturbance gradients(Aarssen 1989 & 1992, Bengtsson et al. 1994, Endres et al. 2021). Thus, empirical tests that link network context with reproductive outcomes are important. Without such integration, we cannot predict which network architecture initiates a mutualistic vs. antagonistic plant-pollinator network. Here, I examine whether floral visitor niche breadth varies with network position, comparing central generalists to peripheral specialists. This analysis will help determine whether variation in floral visitor niche breadth across plant species that differ in network position is structured and nonrandom, or simply a product of chance. The results will allow us to generalize patterns of floral visitor niche breadth when assessing how pollination niche overlap affects plant reproduction--specifically when examining focal plants that vary in network position.  
+
+### Paragraph 5 — Hypotheses (directional) & brief rationale
+- H1: I predict that central generalists will have more variable floral visitor niche breadth than would be expected if I sample from the regional species pool. 
+
+- H2: I predict that peripheral specialists will have less variable floral visitor niche breadth than would be expected if I sample from the regional species pool. 
+
+rationale: Floral visitor niche breadth may be influenced by floral traits. More specialized plants often possess traits that require co-evolved pollinator interactions, resulting in narrow niche breadth. In contrast, more generalized plants typically have less specialized traits that can be utilized by a wider range of pollinators, which may explain why central generalists often exhibit high floral visitor niche breadth. 
+
+## Dataset identification
+- Willamete Data (URL/DOI): 
+Collector: Susan Waters and colleagues
+Methods: Timed plant-pollinator surveys across the Willamette Valley
+Columns: site_abbrev	site	date	iteration	time	observer	temp	hum	wind	plant_codon	plants_per_m2	patch_size	field notes	Multiplier	specimen_ID	Voucher Present	Project	insect_order	Misc Group	insect_family	insect_subfamily	insect_tribe	insect_genus	insect_subgenus	insect_species	insect_spp	Sex	lab notes	det_by	box	transect	Country	State	County	Latitude	Longitude	Elevation	tblPlants.Order	tblPlants.Family	tblPlants.Genus	tblPlants.Species	NonPlantDescription
+
+- Raw Data → Adjacency network → Richness matrix → AB test → Visualization
+
+## Workflow plan (prose)
+1) Cleaning & validation: Normalize raw floral name data using GBIF (validation). Create new column called plant = paste(tblPlants.Genus and tblPlants.Species), remove rows with NA and/or blank in insect_genus and plant columns.
+2) Aggregations/derivations: Create a network using bipartite::frame2webs for each site. calculate d using bipartite::specieslevel. Bin species into specialized vs generalized. 
+3) Functions/loops (inputs → outputs): I will create a function that takes the arguments year and data. This function will filter for each year, shuffle degree, and summarise the expected statistic. I will then create a for loop that applies the function to each year creating a new matrix. Finally, I will combine the function and for loop into one function that take the arguements year and data. This function will shuffle the degree traits for each year and then calculate the mean across years. I will run this loop 100 permutations. 
+4) Statistical test + programmatic implementation: I will test my directional hypotheses for each niche breadth group (specialist vs genearlist) against the null model
+5) Planned visualizations/tables: Table of summary statistics. Histogram of observed vs expected values. 
+6) Risks & mitigations: …parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Notes: 
+1) How do I control for sampling effort? 
+
+## References
+
+Altman, B. (2011). Historical and current distribution and populations of bird species in prairie-oak habitats in the Pacific Northwest. Northwest Science, 85(2), 194-222.
+
+Arceo-Gómez, G., Barker, D., Stanley, A. M., Watson, T., & Daniels, J. (2020). Plant–pollinator network structural properties differentially affect pollen transfer dynamics and pollination success. Oecologia, 192(4), 1037-1045.
+
+Aarssen, L. W. (1989). Competitive ability and species coexistence: a “plant’s-eye” view. Oikos, 56, 386–401.
+
+Aarssen, L. W. (1992). Causes and consequences of variation in competitive ability in plant communities. Journal of Vegetation Science, 3, 165-174.
+
+Bengtsson, J., Fagerström, T., & Rydin, H. (1994). Competition and coexistence in plant communities. Trends in Ecology & Evolution, 9(7), 246-250.
+
+Bergamo, P. J., Traveset, A., & Lázaro, A. (2021). Pollinator-mediated indirect effects on plant fecundity revealed by network indices. The American Naturalist, 198(6), 734-749.
+
+Bronstein, J. L. (Ed.). (2015). Mutualism. Oxford University Press.
+
+Darwin, C. (1959). The origin of species, 1859-1959. Bios, 30(2), 67-72.
+
+Endres, K. L., Morozumi, C. N., Loy, X., Briggs, H. M., CaraDonna, P. J., Iler, A. M., ... & Brosi, B. J. (2021). Plant–pollinator interaction niche broadens in response to severe drought perturbations. Oecologia, 197(3), 577-588.
+
+González, A. V., Murúa, M. M., & Pérez, F. (2015). Floral integration and pollinator diversity in the generalized plant-pollinator system of Alstroemeria ligtu (Alstroemeriaceae). Evolutionary ecology, 29(1), 63-75.
+
+Herrera, C. M. (2005). Plant generalization on pollinators: species property or local phenomenon?. American Journal of Botany, 92(1), 13-20.
+
+Sinclair, M., Alverson, E., Dunn, P., Dunwiddie, P., & Gray, E. (2006). Bunchgrass prairies. Restoring the Pacific Northwest: the art and science of ecological restoration in Cascadia, 29-62.
+
+Wei, N., Kaczorowski, R. L., Arceo-Gómez, G., O’Neill, E. M., Hayes, R. A., & Ashman, T. L. (2020). Pollinator niche partitioning and asymmetric facilitation contribute to the maintenance of diversity. BioRxiv, 2020-03.
+
+Wootton, J. T. (1994). The nature and consequences of indirect effects in ecological communities. Annual Review of Ecology and Systematics, 25, 443–466.
