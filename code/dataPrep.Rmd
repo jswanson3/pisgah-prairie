@@ -1,0 +1,57 @@
+---
+title: "Data Preperation"
+author: "Jacob Swanson"
+date: "2025-11-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+willamette_data <- read_csv("susans_data_normalized.csv",
+                            col_types = cols(
+                              site = col_character(),
+                              date = col_character(),
+                              State = col_character(),
+                              County = col_character(),
+                              insect_genus = col_character(),
+                              insect_species = col_character(),
+                              tblPlants.Genus = col_character(),
+                              tblPlants.Species = col_character(),
+                              scientificName = col_character(),
+                            ))
+colnames(willamette_data)
+dim(willamette_data) #14211 x 11
+
+#Change date format and class
+#create year column
+#rename columns
+#remove empty column
+#filter empty or NA insects and plants
+willamette_data <- willamette_data %>%
+  dplyr::mutate(
+    date = as.Date(lubridate::parse_date_time(date, orders = c("d-b-y", "Ymd"))),
+    year = year(date)) %>% 
+  dplyr::rename(
+    state = State,
+    county = County,
+    plant_species = scientificName) %>%
+  dplyr::select(site, date, state, county, insect_genus, insect_species, plant_species) %>% 
+  dplyr::filter(!is.na(insect_genus), !is.na(plant_species), !is.na(insect_species), insect_genus != "", plant_species !="", insect_species != "")
+
+class(willamette_data$date)
+colnames(willamette_data) #site, date, state, county, insect_genus, insect_species, plant_species
+dim(willamette_data) #7296    7
+```
+
+```{r}
+
+
+```
+
