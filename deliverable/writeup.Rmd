@@ -1,0 +1,592 @@
+---
+title: The Influnce of Plant Partner Variability on Population Dynamics and Network Roles
+  in Willamette Valley Prairies
+author: "Jacob Swanson"
+date: "2025-11-11"
+output:
+  html_document: default
+  pdf_document: default
+bibliography: Bibliography.bib
+---
+
+### I. Introduction
+
+Species-level traits are a central focus in ecology because they influence species fitness [@bergamo_pollinator-mediated_2021], regulate population dynamics [@herrera_plant_2005], and even shape evolutionary trajectories [@cosmo2023indirect]. These traits structure interactions within plant–pollinator networks, which is important because mutualistic networks provide essential ecosystem services in both natural and agricultural systems [@waser2006specialization]. Network theory predicts that pairwise interactions change through space. Highly dynamic pairwise interactions complicates our ability to generalize plant species' network roles across a landscape. Examining partner variability as a plat trait, and how this trait influences network niche through space can help inform conservation planning of rare, cultural, and restoration valuable plants. 
+
+Mutualistic networks consist of two interacting communities called nodes that are connected by links. Using a bipartite approach, we can map species interactions and identify species roles within a network. Well-characterized pairwise interactions change spatially and temporally [@aarssen1989competitive; @aarssen1992causes; @bengtsson1994competition; @carstensen2014beta]. This variation is driven by temporal variation in species composition and phenology [@alarcon2008year; @olesen2008temporal] and interaction re-wiring due to disturbance [@ponisio2020pyrodiversity] or resource availability [@valdovinos_niche_2016].
+
+An important aspect of species diversity is beta diversity--the spatial turnover of species interactions [@carstensen2014beta]. The dissimilarity in beta-diversity of populations in a region is low if populations are interacting with the same species compositions and high when interacting with unique compositions [@ponisio2020pyrodiversity]. Plant species exhibit substantial variability in their interaction partners among conspecific individuals within a population [@gomez2011functional], across populations [@gonzalez2015floral], and among communities [@herrera_plant_2005]. Flexible pairwise interactions likely contribute to a plant species ability to shift between network niches when community composition changes. Thus, it is valuable to examine whether species that are flexible in their interaction partners can occupy different as community composition changes through space.
+
+This study focuses on prairies in the Willamette Valley ecoregion in Oregon. Over the past 175 years native prairie ecosystems in the Pacific Northwest have suffered a drastic decline, with approximately 90-98% lost throughout the region [@sinclair2006bunchgrass; @altman2011historical]. Advancing our understanding of interaction-based ecosystem services by treating partner variability as a trait and evaluating its impacts on population dynamics and network niches is essential for informing conservation planning of these imperiled ecosystems. Yet, studies that link partner variability and network niche remains scarce (see @ponisio2020pyrodiversity). Here, I assess plant partner variability as a trait, and how this trait may predict population dynamics and network niches. 
+
+Across populations plants show substantial variation in their interaction partners. This is likely explained by shifting compositions of available interaction partners as community compositions change with geographic distance [@carstensen2014beta]. As plants become more flexible in their interaction partners, their interannual population dynamics are likely to be less variable because they can more reliably obtain necessary pollination services. Moreover, the network roles they occupy may shift accordingly. This flexible behavior has been observed in plant populations of *L. latifolia* [@herrera_plant_2005], and pollinator populations [@ponisio2020pyrodiversity; @gaiarsa2021pollinator]. These insights have motivated three hypothesis: (1) As beta-diversity increases, the role of a plant within the network will shift. (2) As plants become more flexible in their interaction partners they will show more variation in their network niche (3) Plants that are more flexible in their interaction partners will have a negative relationship with changes in floral abundance among years. 
+
+### II. Data 
+
+Data was provided by our collaborator Susan Waters with Quamash EcoResearch. This dataset included plant-pollinator interactions across 10 sites within the Willamette Valley Ecoregion in Oregon from 2019-2022. The data was collected using standardized timed hand-netting survey methods where bees are collected when actively engaging in pollination. The interacting plant species partners were recorded in all observations and identified to species. Bee species were identified as morphospecies or species when feasible. Site and date (survey round) were recorded for all observations. Using the raw data I created a vegetation dataset that included all plant species sampled and their abundances for each survey round within a site and year, a network dataset that included all plant pollinator interactions, and a spatial dataset with the latitude and longitude converted to a vector (see below). The preparation of datasets and the development of the analytical approach was based on the steps used in @ponisio2020pyrodiversity. The code was sourced from github and modified to meet the analytical destination in the present study. 
+
+### III. Data Wrangling
+
+All data preperation was done in 0DataPrep.R
+
+```{r}
+setwd('C:/pisgah-prairie/data')
+#loads packages
+source('../analysis/src/packages.R')
+```
+
+*Specimen Data*
+
+To clean the desired specimen dataset that includes all plant-pollinator interactions I used the following approach. First, I changed the date to a single format and creating a year column. Vegetation data was standardized using GBIF. All empty cells and NA values in the bee genus, bee species and plant genus, plant species columns were dropped. I used the sum(is.na()) as a built in test for the previous step. I created a genus species column for bees and an interactions column for all interactions of bees and plants. I then subsetted the data to only include bee families. This resulting dataset was used as a specimen dataset. 
+
+```{r}
+setwd('C:/pisgah-prairie/data')
+source('../data/src/misc.R')
+source('../data/src/prepNets.R')
+
+##******************************************************
+## Clean specimen data
+##******************************************************
+spec <- read.csv(
+  "raw/susans_data_normalized.csv",
+  colClasses = "character")
+
+dim(spec) #14211 x 11
+
+#changes date to single format, date class, and create year column
+spec$Date <- lubridate::parse_date_time(
+  spec$Date,
+  orders = c("d-b-y", "Ymd")
+)
+
+spec$Date <- as.Date(spec$Date)
+
+class(spec$Date)
+
+spec <- spec %>%
+  dplyr::mutate(
+    Year = year(Date))
+
+#drop empty cells and NA
+spec <-  spec[spec$Genus != '',]
+spec <-  spec[spec$Species != '',]
+spec <-  spec[spec$PlantGenusSpecies != '',]
+spec <-  spec[!is.na(spec$Genus),]
+spec <-  spec[!is.na(spec$Species),]
+spec <-  spec[!is.na(spec$PlantGenusSpecies),]
+
+# Count NAs in each column
+sum(is.na(spec$Genus))
+sum(is.na(spec$Species))
+sum(is.na(spec$PlantGenusSpecies))
+
+#Create genus species column
+spec$GenusSpecies <- paste(spec$Genus,
+                           spec$Species)
+
+#interactions
+spec$Int <- paste(spec$GenusSpecies,
+                  spec$PlantGenusSpecies)
+
+dim(spec) #5147   22
+
+## drop non-bees
+unique(spec$Family)
+bee.fams <- c("Halictidae", "Andrenidae", "Apidae", "Megachilidae",
+              "Colletidae", "Bombyliidae")
+
+spec <- spec[spec$Family %in% bee.fams,]
+
+#summary
+print(paste("Bee species", length(unique(spec$GenusSpecies))))
+print(paste("Plant species", length(unique(spec$PlantGenusSpecies))))
+print(paste("Bee genera", length(unique(spec$Genus))))
+print(paste("Interactions", length(unique(spec$Int))))
+print(paste("Specimens", nrow(spec)))
+print(length(unique(spec$Site)))
+
+dim(spec)
+```
+
+*Network Data*
+
+To prepare the network matrices for network analysis, I formatted the specimen dataset into a list of interaction matrices for each survey round at each site within a year.
+
+```{r}
+##******************************************************
+## networks
+##******************************************************
+spec <- spec[!spec$PlantGenusSpecies == "",]
+
+nets <- break.net(spec)
+nets <- unlist(nets, recursive=FALSE)
+```
+
+*Vegetation Data*
+
+To create a vegetation dataset with floral counts, I standardized the plant naming conventions using GBIF. I renamed the columns to match the specimen dataset and changed the date to a single format and created a year column. I then dropped all empty cells and NA values in the plant genus and species columns.
+
+```{r}
+##******************************************************
+## clean veg data
+##******************************************************
+
+##Create veg dataset
+raw <- read_csv('C:/pisgah-prairie/data/raw/PPP_PollObs_OR_upto2022_NEW_IDs_20240108 (2).csv')
+norm1 <- read_csv('C:/pisgah-prairie/data/raw/normalized1.csv')
+norm2 <- read_csv("C:/pisgah-prairie/data/raw/normalized2.csv")
+norm3 <- read_csv('C:/pisgah-prairie/data/raw/normalized3.csv')
+
+norm <- rbind(norm1, norm2, norm3)
+
+raw <- raw %>% 
+  select(State, County, Latitude, Longitude, site, date, time, temp, hum, wind, plants_per_m2, patch_size)
+
+veg <- cbind(norm, raw)
+
+#select and rename columns
+veg <- veg %>% 
+  select(-occurrenceId, -acceptedUsageKey, -usageKey, -authorship, -canonicalName, -verbatimScientificName, -matchType, -confidence, -key) %>% 
+  rename(Date = date, Site = site, PlantGenusSpecies = species, Genus = genus, Family = family, Kingdom = kingdom, Phylum = phylum, Class = class, Order = order, FlowerNum = plants_per_m2)
+
+#changes date to single format, date class, and create year column
+veg$Date <- lubridate::parse_date_time(
+  veg$Date,
+  orders = c("d-b-y", "Ymd")
+)
+
+spec$Date <- as.Date(spec$Date)
+
+class(spec$Date)
+
+#create year column
+spec <- spec %>%
+  dplyr::mutate(
+    Year = year(Date))
+
+#drop empty cells and NA
+veg <-  veg[veg$Genus != '',]
+veg <-  veg[veg$PlantGenusSpecies != '',]
+veg <-  veg[!is.na(veg$Genus),]
+veg <-  veg[!is.na(veg$PlantGenusSpecies),]
+
+## correct date format
+veg$Date <- as.Date(veg$Date, format='%m/%d/%y')
+veg$Year <- format(veg$Date, format='%Y')
+veg$doy <- as.numeric(strftime(veg$Date, format='%j'))
+
+#identify species occurrences and convert to binary
+veg$FlowerNum[is.na(veg$FlowerNum)] <- 0
+veg$Occ <- veg$FlowerNum
+veg$Occ[veg$Occ > 0] <- 1
+```
+
+### IV. Observed \& Null Communities
+
+I created null and observed community interaction matrices (1nulls. R). I generated randomized communities to standardize partner beta diversity scores. I constrained null models using alpha diversity for the beta diversity calculation because species vary in their partner richness across populations within the landscape. I first created observed communities for each site and year and then repeated this step to create null communities using modified methods proposed by @vazquez2007species. 
+
+```{r}
+setwd('C:/pisgah-prairie/analysis')
+this.script <- "nulls"
+source('src/misc.R')
+source('src/calcPca.R')
+source('src/calcSpec.R')
+source('src/commPrep.R')
+source('src/vaznull2.R')
+
+load('../data/specimens/spec1.Rdata')
+load('../data/specimens/nets1.Rdata')
+save.path <- 'saved'
+
+save.dir.comm <- "saved/communities"
+save.dir.nulls <- "saved/nulls"
+
+type <- "plant"
+nnull <- 9 
+species.type="PlantGenusSpecies" 
+species.type.int="GenusSpecies"
+
+sites <- unique(spec$Site)
+years <- unique(spec$Year)
+
+## ************************************************************
+## year by species matrices plants
+## ************************************************************
+comms <- lapply(years, calcSiteBeta,
+                species.type=species.type,
+                spec=spec,
+                species.type.int=species.type.int)
+
+comm <- makePretty(comms, spec)
+
+## ************************************************************
+## alpha div nulls
+## ************************************************************
+nulls <- rapply(comm$comm, vaznull.2, N=nnull, how="replace")
+
+## ************************************************************
+## occurrence nulls
+## ************************************************************
+occ.null <- function(web){
+    simulate(vegan::nullmodel(web, method="quasiswap"),1)[,,1]
+}
+
+rep.occ.null <- function(web, N){
+    replicate(N, occ.null(web), simplify = FALSE)
+}
+
+nulls <- rapply(comm$comm, rep.occ.null, N=nnull, how="replace")
+```
+
+### V. Beta Diversity
+
+To quantify how plants are flexible in their interaction partners across populations, I calculated Beta diversity—the change in interaction partners among plant populations across space within a single year  (2partner.R). Using the observed communities and the null communities I calculated beta diversity constrained by alpha diversity using bipartite:betadisper, and then quantified the dissimilarity across populations within a year using the Chao method. Beta-diversity was only calculated for species that were observed at least three times within a single year. The output dataset included beta-diversity values for each species at a site within a single year, and these values were used to represent plant partner variability. 
+
+```{r}
+setwd('C:/pisgah-prairie/analysis')
+source('src/initialize_beta.R')
+source('src/misc.R')
+source('src/calcPca.R')
+source('src/calcSpec.R')
+source('src/beta.R')
+
+## metrics for taking the average and variability of beta div
+var.method <- cv
+
+dis <- mapply(function(a, b, c, d)
+    calcBeta(comm= a, ## observed communities
+             dis.method, ## dissimilarity metric
+             nulls=b, ## null communities
+             occ=binary, ## binary weighted?
+             sub=type,
+             zscore=FALSE), ## used chase method
+    a=comm$comm,
+    b= nulls,
+    SIMPLIFY=FALSE)
+
+beta.dist <- makeBetaDataPretty()
+
+head(beta.dist, n = 10)
+
+# 1. Compute mean for each site
+site_means <- beta.dist %>%
+  group_by(Site) %>%
+  summarise(mean_dist = mean(dist, na.rm = TRUE))
+
+#visualize beta diversity
+partHistPlot <- ggplot2::ggplot(beta.dist, aes(x = dist)) +
+  geom_histogram(fill = "blue", color = "white") +
+  geom_vline(data = site_means,
+             aes(xintercept = mean_dist),
+             color = "red", linewidth = 1.2) +
+  labs(x = "Partner Variability", y = "Frequency") +
+  theme_classic() +
+  theme(text = element_text(size = 30)) +
+  facet_wrap(~Site, ncol = 3)
+```
+
+### VI. Network Niche Variability
+
+I calculated plant network roles and a principal component analysis (PCA) to later be used as my response variables regressed against partner variability (3pca.R). I used the network and specimen dataset and applied bipartite::specieslevel function to calculate pollinator and plant network roles. I subsetted the data to only include plant species roles and dropped pollinators. I selected PCA loadings of interest which encompass a species network role (i.e., rare degree, weighted betweenness, weighted closeness, niche overlap, species strength, \textit{d}) and calculated the mean and variance of the PCA scores. The output dataset was a list of PCA scores for each plant species at a site within a single year. I chose to use the variance of the PCA scores to represent a plant’s ability to occupy different network niches across populations in the landscape because variance better captures the spread of the data than the would otherwise be lost if using the mean.
+
+```{r}
+setwd('C:/pisgah-prairie/analysis')
+source('src/misc.R')
+source('src/calcPca.R')
+source('src/calcSpec.R')
+source('src/commPrep.R')
+source('src/vaznull2.R')
+
+load('../data/specimens/spec1.Rdata')
+load('../data/specimens/nets1.Rdata')
+this.script <- "role"
+type <- "all"
+
+## applies specieslevel from bipartite to networks
+## calculates the species roles from a network and returns a dataframe 
+species.roles <- calcSpec(nets, spec, dist.metric="chao")
+species.roles <- species.roles[species.roles$speciesType == "plant",]
+
+
+head(species.roles, n = 10)
+
+## vector of pca loadings of interest
+loadings <- c(1)
+metrics <- c("rare.degree",
+             "weighted.betweenness",
+             "weighted.closeness",
+             "niche.overlap",
+             "species.strength",
+             "d")
+
+## the metrics used in the PCA
+var.method <- cv
+ave.method <- mean
+
+#changed from pollinator to plant
+plant.pca.scores <- calcPcaMeanVar(species.roles=species.roles, 
+                                   var.method=var.method,
+                                   ave.method=ave.method,
+                                   metrics= metrics,
+                                   loadings=loadings,
+                                   agg.col = "Year")
+
+autoplot(plant.pca.scores$'2019'$pca.loadings, loadings=TRUE,
+         loadings.colour = 'blue')
+
+
+plant.pca.scores.df <- do.call(rbind, lapply(plant.pca.scores, function(x) x$pcas))
+```
+
+### VII. Floral Abundance
+
+I calculated floral abundance using the vegetation dataset (4detlaAbund.R). I first calculated floral abundance for each plant species in a site within a single year. I then calculated the difference in abundance between year pairs (e.g., 2019-2020, 2020-2021, etc.), and then the log-ratio of these values. The resulting dataset was the floral abundance dataset which had log-ratio values of the difference in abundance between year pairs. 
+
+```{r}
+setwd('C:/pisgah-prairie/analysis')
+source('src/setup.R')
+source('src/delta.R')
+source('src/misc.R')
+load('../data/specimens/spec1.Rdata')
+load('../data/veg/veg1.Rdata')
+
+## Calculate the abundance of each species in each year
+plant.abund <- calcPlantABund(spec) 
+
+## calculate the difference the log ratio of abundance between year pairs
+plant.delta <- calcPlantYearDiff(plant.abund)
+
+#converts list to dataframe
+plant.delta.df <- bind_rows(plant.delta , .id = "Year")
+
+plant.delta.tidy <- plant.delta.df%>% 
+  rename(PlantGenusSpecies = GenusSpecies) %>% 
+  mutate(Site = as.character(Site),
+         Year = as.character(Year),
+         PlantGenusSpecies = as.character(PlantGenusSpecies))
+```
+
+### VIII. Join Datasets
+
+I joined datasets that I needed to create my linear models (5joinData.R). The datasets of interest were beta-diversity, PCA scores, network roles, and floral abundance datasets. I standardized class type for year, site, plant genus species as character. I then created a key in each dataset to later join the datasets into a single data frame. The output data frame included beta-diversity values, PCA scores (mean and variance), network roles, and log-ratio floral abundances (for year pairs) for each plant species at a site within a single year. 
+
+```{r}
+setwd('C:/pisgah-prairie/analysis/saved')
+load('../saved/results/specRoles.Rdata')
+load('../saved/results/deltaAbund.Rdata')
+load('../saved/results/partnerVar.Rdata')
+load('../saved/results/pcaVar.Rdata')
+
+#Create key SpSiteYear and change class to character for each dataframe
+delta.tidy <- plant.delta.tidy %>% 
+  dplyr::mutate(
+    PlantGenusSpecies = as.character(PlantGenusSpecies),
+    Year = as.character(Year), 
+    Site = as.character(Site),
+    SpSiteYear = paste0(PlantGenusSpecies, Site, Year, " "),
+    SpSiteYear = trimws(SpSiteYear))
+
+beta.dist.tidy <- beta.dist %>%
+  dplyr::mutate(
+    PlantGenusSpecies = as.character(PlantGenusSpecies),
+    Year = as.character(Year), 
+    Site = as.character(Site),
+    SpSiteYear = paste0(PlantGenusSpecies, Site, Year, " "),
+    SpSiteYear = trimws(SpSiteYear))
+
+spec.roles.tidy <- species.roles %>% 
+  dplyr::rename(PlantGenusSpecies = GenusSpecies) %>% 
+  dplyr::mutate(
+    PlantGenusSpecies = as.character(PlantGenusSpecies),
+    Year = as.character(Year), 
+    Site = as.character(Site),
+    SpSiteYear = paste0(PlantGenusSpecies, Site, Year, " "),
+    SpSiteYear = trimws(SpSiteYear))
+
+pca.scores.tidy <- plant.pca.scores.df %>% 
+  dplyr::rename(PlantGenusSpecies = GenusSpecies) %>% 
+  dplyr::mutate(
+    PlantGenusSpecies = as.character(PlantGenusSpecies),
+    Year = as.character(Year), 
+    Site = as.character(Site),
+    SpSiteYear = paste0(PlantGenusSpecies, Site, Year, " "),
+    SpSiteYear = trimws(SpSiteYear))
+
+#Check structure of SpSiteYear for consistency
+str(delta.tidy$SpSiteYear)
+str(beta.dist.tidy$SpSiteYear)
+str(spec.roles.tidy$SpSiteYear)
+
+head(delta.tidy$SpSiteYear, n = 10)
+head(beta.dist.tidy$SpSiteYear, n = 10)
+head(spec.roles.tidy$SpSiteYear, n = 10)
+
+#Join dataframes
+specAnalysis <- spec.roles.tidy %>%
+  dplyr::left_join(delta.tidy %>% select(-Year, -Site, -PlantGenusSpecies), by = "SpSiteYear") %>%
+  dplyr::left_join(beta.dist.tidy %>% select(-Year, -Site, -Date, -PlantGenusSpecies), by = "SpSiteYear") %>% 
+  dplyr::left_join(pca.scores.tidy %>% select(-Year, -Site, -PlantGenusSpecies), by = "SpSiteYear")
+
+# Filter data for non-zero deltaAbund and beta dispersion
+specAnalysis <- specAnalysis %>% 
+  dplyr::filter(dist != 0, deltaAbund != 0, mean.pca1 !=0) %>% 
+  na.omit()
+
+#visualize data of interest
+hist(specAnalysis$dist)
+hist(specAnalysis$deltaAbund)
+hist(specAnalysis$d)
+hist(specAnalysis$weighted.closeness)
+hist(specAnalysis$mean.pca1)
+```
+
+### IX. Linear Models
+
+To test my hypotheses I created linear models (6modelPlot.R). I first visualized each variable of interest using a histogram to see any extreme outliers. I created four separate linear models. Each model had a different response variable, partner variability (beta-diversity) was a fixed effect, and I included site as a random effect. I created a linear model for each of the following response variables: log-ratio floral abundance, d, nested rank, and network niche variability (i.e., using PCA variance). Example linear model: network niche variability ~ scale(beta-diversity) + (1|Site). I then used the predicted coefficients from each model to plot the results. 
+
+```{r}
+setwd('C:/pisgah-prairie/analysis')
+load('saved/results/specAnalysis.Rdata')
+source('src/predictIntervals.R')
+
+## visualizes and removes outliers.
+## The outliers have no effect on models and is more visually appealing when removed
+hist(specAnalysis$deltaAbund)
+hist(specAnalysis$d)
+hist(specAnalysis$var.pca1)
+hist(specAnalysis$deltaAbund)
+hist(specAnalysis$nestedrank)
+sum(is.na(specAnalysis$deltaAbund))
+
+#Create linear mixed models
+##############
+##Delta floral abundance vs partner variability
+##############
+delta.abund.mod <- lmerTest::lmer(deltaAbund ~ scale(dist) + (1|Site),  data = specAnalysis)
+summary(delta.abund.mod)
+
+##############
+##d vs partner variability
+##############
+d.mod <- lmerTest::lmer(d ~ scale(dist) + (1|Site), data = specAnalysis)
+summary(d.mod)
+
+##############
+##Weighted closeness vs partner variability
+##############
+close.mod <- lmerTest::lmer(weighted.closeness ~ scale(dist) + (1|Site), data = specAnalysis)
+summary(close.mod)
+
+##############
+##Nestedness vs partner variability
+##############
+nested.mod <- lmerTest::lmer(nestedrank ~ scale(dist) + (1|Site), data = specAnalysis)
+summary(nested.mod)
+
+##############
+##role variability vs partner variability
+##############
+#identify extreme outliers and remove (-300+ variance)
+which(specAnalysis$var.pca1 < -100)
+specAnalysis <- specAnalysis[-c(135, 136, 137, 138, 144, 145, 146, 147), ] 
+pca.mod <- lmerTest::lmer(var.pca1 ~ scale(dist) + (1|Site), data = specAnalysis)
+summary(pca.mod)
+
+
+#This function uses a linear model to predict values for a network metric 
+#and creates plots to visualize
+plot.s <- function(specAnalysis, response, mod) {
+  # Create prediction grid
+  expand.grid <- data.frame(
+    dist = seq(min(specAnalysis$dist),
+               max(specAnalysis$dist),
+               length.out = 100)
+  )
+  
+  # Add placeholder column for response
+  expand.grid[[response]] <- 0
+  
+  # Predict using custom function
+  pred <- predict.int(mod = mod,
+                      dd = expand.grid,
+                      y = response,
+                      family = "gaussian")
+  
+  # Plot
+  ggplot() +
+    # geom_point(data = pred, aes(x = dist, y = .data[[response]])) +
+    geom_line(data = pred, aes(x = dist, y = .data[[response]]), color = "blue", linewidth = 1.2) +
+    geom_ribbon(data = pred, aes(x = dist, ymin = plo, ymax = phi), alpha = 0.2, fill = "blue") +
+    theme_classic() +
+    theme(text = element_text(size = 20))
+}
+
+plot.ns <- function(specAnalysis, response, mod) {
+  # Create prediction grid
+  expand.grid <- data.frame(
+    dist = seq(min(specAnalysis$dist),
+               max(specAnalysis$dist),
+               length.out = 100)
+  )
+  
+  # Add placeholder column for response
+  expand.grid[[response]] <- 0
+  
+  # Predict using custom function
+  pred <- predict.int(mod = mod,
+                      dd = expand.grid,
+                      y = response,
+                      family = "gaussian")
+  
+  # Plot
+  ggplot() +
+    # geom_point(data = pred, aes(x = dist, y = .data[[response]])) +
+    geom_line(data = pred, aes(x = dist, y = .data[[response]]), color = "blue", linetype = "dashed", linewidth = 1.2) +
+    geom_ribbon(data = pred, aes(x = dist, ymin = plo, ymax = phi), alpha = 0.2, fill = "blue") +
+    theme_classic() +
+    theme(text = element_text(size = 20))
+}
+
+##Plot models
+#########################
+##Delta abundance vs partner variability
+#########################
+delta.abund.plot <- plot.ns(specAnalysis, "deltaAbund", delta.abund.mod)
+
+delta.abund.plot.labeled <- delta.abund.plot + labs(x = "Partner Variability", y = "Log-ratio Floral Abundance")
+
+#########################
+##d vs partner variability
+#########################
+d.dist.plot <- plot.ns(specAnalysis, "d", d.mod)
+
+d.dist.plot.labeled <- d.dist.plot + labs(x = "Partner Variability", y = "d")
+
+#########################
+##Nestedness vs partner variability
+#########################
+nested.dist.plot <- plot.ns(specAnalysis, "nestedrank", nested.mod)
+
+nested.dist.plot.labeled <- nested.dist.plot + labs(x = "Partner Variability", y = "Nested Rank")
+
+#########################
+##Role variability vs partner variability
+#########################
+pca.dist.plot <- plot.s(specAnalysis, "var.pca1", pca.mod)
+
+pca.dist.plot.labeled <- pca.dist.plot + labs(x = "Partner Variability", y = "Network Niche Variability")
+
+#Combine plots into single grid
+combinedPlot <- cowplot::plot_grid(delta.abund.plot.labeled, pca.dist.plot.labeled, d.dist.plot.labeled,
+                                   nested.dist.plot.labeled, ncol = 2)
+print(combinedPlot)
+```
+
+### X. Conclusions
+
+Partner variability as a plant trait proves to be a fruitful area of study. Plants were flexible in their interaction partners across space, with comparable expected partner variability for those sites with high sampling effort. This is likely explained by communities with similar pairwise interactions locally, as the communities sampled in the present study are close in geographic area [@carstensen2014beta]. 
+
+Plant variability was positively associated with network niche variability, whereas its associations with *d* and nested rank were not statistically significant. These patterns indicate that plants with flexible interaction partners may maintain similar roles within a network while also influencing the overall network structure. @gaiarsa2021pollinator performed a similar study from the pollinators perspective using a motif approach to quantify role variability incorporating indirect interactions. They found that role variability and partner variability were not related. I propose that differences in the structural organization of interaction partners between plants and pollinators cause each group to influence network structure in distinct ways, likely reflecting the different benefits they derive from mutualistic interactions [@van2021mutualisms].
+
+Interestingly, partner variability was negatively associated with differences in floral abundance across pairwise years, although this relationship was not statistically significant. Floral abundance is linked to network asymmetry: abundant species tend to exert stronger interaction effects on their partners than they receive in return, whereas the opposite pattern is observed for rare species [@vazquez2007species]. In addition, the likelihood that a pollinator interacts with a particular plant is influenced by variation in floral abundance [@carstensen2014beta]. In our case, from the plant’s perspective, changes in pairwise interactions did not affect floral abundance.
+
