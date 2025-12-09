@@ -1,6 +1,4 @@
 library(vegan)
-source('src/misc.R')
-source('src/beta.R')
 
 args <- commandArgs(trailingOnly=TRUE)
 if(length(args) != 0){

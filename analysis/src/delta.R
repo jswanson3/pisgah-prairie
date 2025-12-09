@@ -62,7 +62,7 @@ calcPlantDelta <- function(yr, plant.abund){
   sites.both.yrs <- sites.yr1[sites.yr1 %in% sites.yr2]
   
   ## species found in the first year
-  sp.yr1 <- unique(plant.abund$PlantGenusSpecies[plant.abund$Year == yr & #changed from GenusSpecies (bee) to PlantGenusSpecies
+  sp.yr1 <- unique(plant.abund$PlantGenusSpecies[plant.abund$Year == yr &
                                               plant.abund$Site %in% sites.both.yrs])
   
   empty.mat <- matrix(0, nrow=length(sites.both.yrs),

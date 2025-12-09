@@ -7,7 +7,7 @@ library(bipartite, quietly = TRUE)
 library(lme4, quietly = TRUE)
 library(lmerTest, quietly = TRUE)
 
-setwd('C:/Yosemite/analysis/variability')
+setwd('C:/pisgah-prairie/analysis')
 this.script <- "nulls"
 source('src/misc.R')
 source('src/calcPca.R')

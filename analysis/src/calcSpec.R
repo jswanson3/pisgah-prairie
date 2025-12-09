@@ -1,5 +1,3 @@
-library(fossil)
-
 getSpec <- function(species.lev, names.net, seps="[.]"){
     ## extract specialization scores from specieslevel function and
     ## return data frame

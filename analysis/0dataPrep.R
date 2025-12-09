@@ -91,6 +91,10 @@ nets <- unlist(nets, recursive=FALSE)
 
 save(nets, file='specimens/nets1.Rdata')
 
+##******************************************************
+## clean veg data
+##******************************************************
+
 ##Create veg dataset
 raw <- read_csv('C:/pisgah-prairie/data/raw/PPP_PollObs_OR_upto2022_NEW_IDs_20240108 (2).csv')
 norm1 <- read_csv('C:/pisgah-prairie/data/raw/normalized1.csv')
@@ -132,13 +136,6 @@ veg <-  veg[veg$PlantGenusSpecies != '',]
 veg <-  veg[!is.na(veg$Genus),]
 veg <-  veg[!is.na(veg$PlantGenusSpecies),]
 
-##******************************************************
-## clean veg data
-##******************************************************
-
-
-veg <- spec %>% 
-  select()
 
 
 ## correct date format
@@ -146,15 +143,11 @@ veg$Date <- as.Date(veg$Date, format='%m/%d/%y')
 veg$Year <- format(veg$Date, format='%Y')
 veg$doy <- as.numeric(strftime(veg$Date, format='%j'))
 
-## drop data from incomplete sampling round from veg data
-# extra.round <- veg$Site == 'L21' & veg$Date == '2014-07-01'
-# veg <- veg[!extra.round,]
-
 veg$FlowerNum[is.na(veg$FlowerNum)] <- 0
 veg$Occ <- veg$FlowerNum
 veg$Occ[veg$Occ > 0] <- 1
 
-## convert color number catagory coding toactual values
+## convert color number catagory coding to actual values
 veg$logFlowerNum <- veg$FlowerNum
 veg$logFlowerNum[veg$logFlowerNum == 2] <- 10
 veg$logFlowerNum[veg$logFlowerNum == 3] <- 100
